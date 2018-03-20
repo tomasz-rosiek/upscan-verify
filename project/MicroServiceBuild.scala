@@ -5,7 +5,7 @@ import uk.gov.hmrc.versioning.SbtGitVersioning
 
 object MicroServiceBuild extends Build with MicroService {
 
-  val appName = "upscan-scanner"
+  val appName = "upscan-verify"
 
   override lazy val plugins: Seq[Plugins] = Seq(
     SbtAutoBuildPlugin,

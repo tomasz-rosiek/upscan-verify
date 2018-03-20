@@ -1,8 +1,8 @@
-# upscan-scanner
+# upscan-verify
 
 TODO
 
-[![Build Status](https://travis-ci.org/hmrc/upscan-scanner.svg)](https://travis-ci.org/hmrc/upscan-scanner) [ ![Download](https://api.bintray.com/packages/hmrc/releases/upscan-scanner/images/download.svg) ](https://bintray.com/hmrc/releases/upscan-scanner/_latestVersion)
+[![Build Status](https://travis-ci.org/hmrc/upscan-verify.svg)](https://travis-ci.org/hmrc/upscan-verify) [ ![Download](https://api.bintray.com/packages/hmrc/releases/upscan-verify/images/download.svg) ](https://bintray.com/hmrc/releases/upscan-verify/_latestVersion)
 
 # Running locally
 

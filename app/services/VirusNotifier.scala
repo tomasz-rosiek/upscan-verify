@@ -16,18 +16,10 @@
 
 package services
 
-import model.UploadedFile
+import model.S3ObjectLocation
 
 import scala.concurrent.Future
 
-sealed trait ScanningResult
-case object FileIsClean extends ScanningResult
-case class FileIsInfected(details: String) extends ScanningResult
-
-trait ScanningService {
-  def scan(notification: UploadedFile): Future[ScanningResult]
-}
-
-class MockScanningService extends ScanningService {
-  override def scan(notification: UploadedFile) = Future.successful(FileIsClean)
+trait VirusNotifier {
+  def notifyFileInfected(file: S3ObjectLocation, details: String): Future[Unit]
 }
