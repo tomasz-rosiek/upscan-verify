@@ -29,5 +29,5 @@ trait ScanningService {
 }
 
 class MockScanningService extends ScanningService {
-  override def scan(notification: UploadedFile) = Future.successful(FileIsClean)
+  override def scan(notification: UploadedFile): Future[FileIsClean.type] = Future.successful(FileIsClean)
 }

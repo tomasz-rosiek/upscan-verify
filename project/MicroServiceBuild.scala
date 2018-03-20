@@ -39,14 +39,10 @@ private object AppDependencies {
     "org.pegdown"            % "pegdown"                      % "1.6.0"             % scope,
     "com.typesafe.play"      %% "play-test"                   % PlayVersion.current % scope,
     "org.mockito"            % "mockito-core"                 % "2.6.2"             % scope,
-    "com.github.tomakehurst" % "wiremock"                     % "2.2.2"             % scope,
     "org.scalamock"          %% "scalamock-scalatest-support" % "3.5.0"             % scope,
     "org.scalatestplus.play" %% "scalatestplus-play"          % "2.0.0"             % scope,
-    "io.findify"             %% "s3mock"                      % "0.2.4"             % scope,
     "com.typesafe.play"      %% "play-ws"                     % "2.5.6"             % scope,
-    "commons-io"             % "commons-io"                   % "2.6"               % scope,
-    "org.scalacheck"         %% "scalacheck"                  % "1.13.4"            % scope,
-    "com.github.tomakehurst" % "wiremock"                     % "1.58"              % scope
+    "commons-io"             % "commons-io"                   % "2.6"               % scope
   )
 
   object Test {
