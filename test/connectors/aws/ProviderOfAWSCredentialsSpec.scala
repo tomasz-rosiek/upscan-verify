@@ -16,12 +16,10 @@
 
 package connectors.aws
 
-import com.amazonaws.auth.{AWSCredentialsProvider, AWSSessionCredentials}
+import com.amazonaws.auth.{AWSCredentialsProvider, AWSSessionCredentials, EC2ContainerCredentialsProviderWrapper}
 import config.ServiceConfiguration
 import org.scalatest.Matchers
 import uk.gov.hmrc.play.test.UnitSpec
-
-import scala.concurrent.duration.FiniteDuration
 
 class ProviderOfAWSCredentialsSpec extends UnitSpec with Matchers {
 
@@ -43,6 +41,8 @@ class ProviderOfAWSCredentialsSpec extends UnitSpec with Matchers {
         override def retryInterval = ???
 
         override def outboundBucket = ???
+
+        override def useContainerCredentials = false
       }
 
       val credentials: AWSCredentialsProvider = new ProviderOfAWSCredentials(configuration).get()
@@ -69,6 +69,8 @@ class ProviderOfAWSCredentialsSpec extends UnitSpec with Matchers {
         override def retryInterval = ???
 
         override def outboundBucket = ???
+
+        override def useContainerCredentials = false
       }
 
       val credentials: AWSCredentialsProvider = new ProviderOfAWSCredentials(configuration).get()
@@ -76,6 +78,31 @@ class ProviderOfAWSCredentialsSpec extends UnitSpec with Matchers {
       credentials.getCredentials.getAWSAccessKeyId shouldBe "KEY_ID"
       credentials.getCredentials.getAWSSecretKey   shouldBe "ACCESS_KEY"
       credentials.getCredentials shouldNot be(a[AWSSessionCredentials])
+    }
+
+    "create container credentials provided if it was chosen" in {
+      val configuration = new ServiceConfiguration {
+
+        override def accessKeyId: String = ???
+
+        override def awsRegion: String = ???
+
+        override def secretAccessKey: String = ???
+
+        override def sessionToken: Option[String] = None
+
+        override def inboundQueueUrl: String = ???
+
+        override def retryInterval = ???
+
+        override def outboundBucket = ???
+
+        override def useContainerCredentials = true
+      }
+
+      val credentials: AWSCredentialsProvider = new ProviderOfAWSCredentials(configuration).get()
+
+      credentials shouldBe a[EC2ContainerCredentialsProviderWrapper]
     }
   }
 

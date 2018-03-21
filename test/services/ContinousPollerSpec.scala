@@ -48,6 +48,8 @@ class ContinousPollerSpec extends UnitSpec with MockitoSugar with Eventually {
     override def inboundQueueUrl: String = ???
 
     override def outboundBucket = ???
+
+    override def useContainerCredentials = ???
   }
 
   "QueuePollingJob" should {
