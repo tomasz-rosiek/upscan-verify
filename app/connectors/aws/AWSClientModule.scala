@@ -18,7 +18,7 @@ package connectors.aws
 
 import javax.inject.{Inject, Provider}
 
-import com.amazonaws.auth.{AWSCredentialsProvider, AWSStaticCredentialsProvider, BasicAWSCredentials, BasicSessionCredentials}
+import com.amazonaws.auth._
 import com.amazonaws.services.s3.{AmazonS3, AmazonS3ClientBuilder}
 import com.amazonaws.services.sqs.{AmazonSQS, AmazonSQSClientBuilder}
 import config.ServiceConfiguration
@@ -38,12 +38,16 @@ class AWSClientModule extends Module {
 
 class ProviderOfAWSCredentials @Inject()(configuration: ServiceConfiguration) extends Provider[AWSCredentialsProvider] {
   override def get(): AWSCredentialsProvider =
-    new AWSStaticCredentialsProvider(configuration.sessionToken match {
-      case Some(sessionToken) =>
-        new BasicSessionCredentials(configuration.accessKeyId, configuration.secretAccessKey, sessionToken)
-      case None =>
-        new BasicAWSCredentials(configuration.accessKeyId, configuration.secretAccessKey)
-    })
+    if (configuration.useContainerCredentials) {
+      new EC2ContainerCredentialsProviderWrapper()
+    } else {
+      new AWSStaticCredentialsProvider(configuration.sessionToken match {
+        case Some(sessionToken) =>
+          new BasicSessionCredentials(configuration.accessKeyId, configuration.secretAccessKey, sessionToken)
+        case None =>
+          new BasicAWSCredentials(configuration.accessKeyId, configuration.secretAccessKey)
+      })
+    }
 }
 
 class SqsClientProvider @Inject()(credentialsProvider: AWSCredentialsProvider) extends Provider[AmazonSQS] {

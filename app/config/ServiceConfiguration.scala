@@ -35,6 +35,8 @@ trait ServiceConfiguration {
 
   def awsRegion: String
 
+  def useContainerCredentials: Boolean
+
 }
 
 class PlayBasedServiceConfiguration @Inject()(configuration: Configuration) extends ServiceConfiguration {
@@ -43,6 +45,8 @@ class PlayBasedServiceConfiguration @Inject()(configuration: Configuration) exte
     getRequired(configuration.getString(_), "aws.sqs.queue.inbound")
 
   override def awsRegion = getRequired(configuration.getString(_), "aws.s3.region")
+
+  override def useContainerCredentials = configuration.getBoolean("aws.useContainerCredentials").getOrElse(true)
 
   override def accessKeyId = getRequired(configuration.getString(_), "aws.accessKeyId")
 
