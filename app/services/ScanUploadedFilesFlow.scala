@@ -45,7 +45,7 @@ class ScanUploadedFilesFlow @Inject()(
         parsedMessage  <- parser.parse(message)
         uploadedFile   <- fileDetailsRetriever.retrieveUploadedFileDetails(parsedMessage.location)
         scanningResult <- scanningService.scan(uploadedFile)
-        _              <- scanningResultHandler.handleScanningResult(uploadedFile.location, scanningResult)
+        _              <- scanningResultHandler.handleScanningResult(scanningResult)
         _              <- consumer.confirm(message)
       } yield ()
 

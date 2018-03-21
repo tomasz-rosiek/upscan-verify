@@ -25,10 +25,10 @@ import scala.concurrent.{ExecutionContext, Future}
 class ScanningResultHandler @Inject()(fileManager: FileManager, virusNotifier: VirusNotifier)(
   implicit ec: ExecutionContext) {
 
-  def handleScanningResult(file: S3ObjectLocation, result: ScanningResult): Future[Unit] =
+  def handleScanningResult(result: ScanningResult): Future[Unit] =
     result match {
-      case FileIsClean             => handleClean(file)
-      case FileIsInfected(details) => handleInfected(file, details)
+      case FileIsClean(file)             => handleClean(file)
+      case FileIsInfected(file, details) => handleInfected(file, details)
     }
 
   private def handleInfected(file: S3ObjectLocation, details: String) =
