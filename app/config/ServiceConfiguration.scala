@@ -31,6 +31,8 @@ trait ServiceConfiguration {
 
   def sessionToken: Option[String]
 
+  def outboundBucket: String
+
   def awsRegion: String
 
 }
@@ -53,4 +55,5 @@ class PlayBasedServiceConfiguration @Inject()(configuration: Configuration) exte
   def getRequired[T](function: String => Option[T], key: String) =
     function(key).getOrElse(throw new IllegalStateException(s"Configuration key not found: $key"))
 
+  override def outboundBucket = getRequired(configuration.getString(_), "aws.s3.bucket.outbound")
 }

@@ -16,8 +16,6 @@
 
 package model
 
-import java.net.URL
-
 case class Message(id: String, body: String, receiptHandle: String)
 case class UploadedFile(location: S3ObjectLocation)
 

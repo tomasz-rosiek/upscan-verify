@@ -27,7 +27,8 @@ class ScanUploadedFilesFlow @Inject()(
   consumer: QueueConsumer,
   parser: MessageParser,
   fileDetailsRetriever: FileNotificationDetailsRetriever,
-  scanningService: ScanningService)(implicit ec: ExecutionContext)
+  scanningService: ScanningService,
+  scanningResultHandler: ScanningResultHandler)(implicit ec: ExecutionContext)
     extends PollingJob {
   def run(): Future[Unit] = {
     val outcomes = for {
@@ -41,10 +42,11 @@ class ScanUploadedFilesFlow @Inject()(
   private def processMessage(message: Message): Future[Unit] = {
     val outcome =
       for {
-        parsedMessage <- parser.parse(message)
-        uploadedFile  <- fileDetailsRetriever.retrieveUploadedFileDetails(parsedMessage.location)
-        _             <- scanningService.scan(uploadedFile)
-        _             <- consumer.confirm(message)
+        parsedMessage  <- parser.parse(message)
+        uploadedFile   <- fileDetailsRetriever.retrieveUploadedFileDetails(parsedMessage.location)
+        scanningResult <- scanningService.scan(uploadedFile)
+        _              <- scanningResultHandler.handleScanningResult(scanningResult)
+        _              <- consumer.confirm(message)
       } yield ()
 
     outcome.onFailure {

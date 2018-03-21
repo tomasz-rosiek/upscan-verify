@@ -70,7 +70,7 @@ class S3EventMessageParserSpec extends UnitSpec with Matchers {
                         |        "principalId": "AWS:AIDAIIELOEELZHP2AGCQU"
                         |      },
                         |      "requestParameters": {
-                        |        "sourceIPAddress": "185.40.10.146"
+                        |        "sourceIPAddress": "someIp"
                         |      },
                         |      "responseElements": {
                         |        "x-amz-request-id": "119DF70CC1EA8B55",
@@ -127,7 +127,7 @@ class S3EventMessageParserSpec extends UnitSpec with Matchers {
       |        "principalId": "AWS:AIDAIIELOEELZHP2AGCQU"
       |      },
       |      "requestParameters": {
-      |        "sourceIPAddress": "185.40.10.146"
+      |        "sourceIPAddress": "someIp"
       |      },
       |      "responseElements": {
       |        "x-amz-request-id": "119DF70CC1EA8B55",

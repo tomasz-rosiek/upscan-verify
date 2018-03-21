@@ -16,8 +16,6 @@
 
 package services
 
-import java.net.URL
-
 import model._
 import org.mockito.ArgumentMatchers.any
 import org.mockito.Mockito
@@ -25,9 +23,9 @@ import org.scalatest.mockito.MockitoSugar
 import org.scalatest.{GivenWhenThen, Matchers}
 import uk.gov.hmrc.play.test.UnitSpec
 
-import scala.concurrent.{Await, Future}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
+import scala.concurrent.{Await, Future}
 
 class ScanUploadedFilesFlowSpec extends UnitSpec with Matchers with GivenWhenThen with MockitoSugar {
 
@@ -38,16 +36,13 @@ class ScanUploadedFilesFlowSpec extends UnitSpec with Matchers with GivenWhenThe
     }
   }
 
-  val callbackUrl = new URL("http://localhost:8080")
-  val downloadUrl = new URL("http://remotehost/bucket/123")
-
   val fileDetailsRetriever = new FileNotificationDetailsRetriever {
     override def retrieveUploadedFileDetails(objectLocation: S3ObjectLocation): Future[UploadedFile] =
       Future.successful(UploadedFile(objectLocation))
   }
 
-  "SuccessfulUploadNotificationProcessingFlow" should {
-    "get messages from the queue consumer, and call notification service for valid messages" in {
+  "ScanUploadedFilesFlow" should {
+    "get messages from the queue consumer, and scan and postprocess valid messages" in {
       Given("there are only valid messages in a message queue")
       val validMessage = Message("ID", "VALID-BODY", "RECEIPT-1")
 
@@ -56,10 +51,15 @@ class ScanUploadedFilesFlowSpec extends UnitSpec with Matchers with GivenWhenThe
       Mockito.when(queueConsumer.confirm(any())).thenReturn(Future.successful(()))
 
       val scanningService = mock[ScanningService]
-      Mockito.when(scanningService.scan(any())).thenReturn(Future.successful(()))
+      Mockito
+        .when(scanningService.scan(any()))
+        .thenReturn(Future.successful(FileIsClean(S3ObjectLocation("bucket", "ID"))))
+
+      val scanningResultHandler = mock[ScanningResultHandler]
+      Mockito.when(scanningResultHandler.handleScanningResult(any())).thenReturn(Future.successful(()))
 
       val queueOrchestrator =
-        new ScanUploadedFilesFlow(queueConsumer, parser, fileDetailsRetriever, scanningService)
+        new ScanUploadedFilesFlow(queueConsumer, parser, fileDetailsRetriever, scanningService, scanningResultHandler)
 
       When("the orchestrator is called")
       Await.result(queueOrchestrator.run(), 30 seconds)
@@ -67,14 +67,16 @@ class ScanUploadedFilesFlowSpec extends UnitSpec with Matchers with GivenWhenThe
       Then("the queue consumer should poll for messages")
       Mockito.verify(queueConsumer).poll()
 
-      And("callback recipient is notified")
-      Mockito.verify(scanningService).scan(any())
+      And("scanning result handler is called")
+      Mockito
+        .verify(scanningResultHandler)
+        .handleScanningResult(FileIsClean(S3ObjectLocation("bucket", "ID")))
 
       And("successfully processed messages are confirmed")
       Mockito.verify(queueConsumer).confirm(validMessage)
     }
 
-    "get messages from the queue consumer, and call notification service for valid messages and ignore invalid messages" in {
+    "get messages from the queue consumer, and perform scanning for valid messages and ignore invalid messages" in {
       Given("there are only valid messages in a message queue")
       val validMessage1  = Message("ID1", "VALID-BODY", "RECEIPT-1")
       val invalidMessage = Message("ID2", "INVALID-BODY", "RECEIPT-2")
@@ -89,12 +91,21 @@ class ScanUploadedFilesFlowSpec extends UnitSpec with Matchers with GivenWhenThe
 
       val scanningService = mock[ScanningService]
       Mockito
-        .when(scanningService.scan(any()))
+        .when(scanningService.scan(UploadedFile(S3ObjectLocation("bucket", "ID1"))))
+        .thenReturn(Future.successful(FileIsClean(S3ObjectLocation("bucket", "ID1"))))
+
+      Mockito
+        .when(scanningService.scan(UploadedFile(S3ObjectLocation("bucket", "ID3"))))
+        .thenReturn(Future.successful(FileIsInfected(S3ObjectLocation("bucket", "ID3"), "infection")))
+
+      val scanningResultHandler = mock[ScanningResultHandler]
+      Mockito
+        .when(scanningResultHandler.handleScanningResult(any()))
         .thenReturn(Future.successful(()))
         .thenReturn(Future.successful(()))
 
       val queueOrchestrator =
-        new ScanUploadedFilesFlow(queueConsumer, parser, fileDetailsRetriever, scanningService)
+        new ScanUploadedFilesFlow(queueConsumer, parser, fileDetailsRetriever, scanningService, scanningResultHandler)
 
       When("the orchestrator is called")
       Await.result(queueOrchestrator.run(), 30 seconds)
@@ -103,7 +114,13 @@ class ScanUploadedFilesFlowSpec extends UnitSpec with Matchers with GivenWhenThe
       Mockito.verify(queueConsumer).poll()
 
       And("notification service is called only for valid messages")
-      Mockito.verify(scanningService, Mockito.times(2)).scan(any())
+      Mockito
+        .verify(scanningResultHandler)
+        .handleScanningResult(FileIsClean(S3ObjectLocation("bucket", "ID1")))
+      Mockito
+        .verify(scanningResultHandler)
+        .handleScanningResult(FileIsInfected(S3ObjectLocation("bucket", "ID3"), "infection"))
+      Mockito.verifyNoMoreInteractions(scanningResultHandler)
 
       And("successfully processed messages are confirmed")
       Mockito.verify(queueConsumer).confirm(validMessage1)
@@ -113,7 +130,7 @@ class ScanUploadedFilesFlowSpec extends UnitSpec with Matchers with GivenWhenThe
       Mockito.verifyNoMoreInteractions(queueConsumer)
     }
 
-    "do not confirm valid messages for which notification has failed" in {
+    "do not confirm valid messages for which scanning has failed" in {
 
       Given("there are only valid messages in a message queue")
       val validMessage1 = Message("ID1", "VALID-BODY", "RECEIPT-1")
@@ -130,7 +147,7 @@ class ScanUploadedFilesFlowSpec extends UnitSpec with Matchers with GivenWhenThe
       val scanningService = mock[ScanningService]
       Mockito
         .when(scanningService.scan(UploadedFile(S3ObjectLocation("bucket", "ID1"))))
-        .thenReturn(Future.successful(()))
+        .thenReturn(Future.successful(FileIsClean(S3ObjectLocation("bucket", "ID1"))))
 
       Mockito
         .when(scanningService.scan(UploadedFile(S3ObjectLocation("bucket", "ID2"))))
@@ -138,10 +155,13 @@ class ScanUploadedFilesFlowSpec extends UnitSpec with Matchers with GivenWhenThe
 
       Mockito
         .when(scanningService.scan(UploadedFile(S3ObjectLocation("bucket", "ID3"))))
-        .thenReturn(Future.successful(()))
+        .thenReturn(Future.successful(FileIsInfected(S3ObjectLocation("bucket", "ID3"), "infection")))
+
+      val scanningResultHandler = mock[ScanningResultHandler]
+      Mockito.when(scanningResultHandler.handleScanningResult(any())).thenReturn(Future.successful(()))
 
       val queueOrchestrator =
-        new ScanUploadedFilesFlow(queueConsumer, parser, fileDetailsRetriever, scanningService)
+        new ScanUploadedFilesFlow(queueConsumer, parser, fileDetailsRetriever, scanningService, scanningResultHandler)
 
       When("the orchestrator is called")
       Await.result(queueOrchestrator.run(), 30 seconds)
@@ -149,8 +169,14 @@ class ScanUploadedFilesFlowSpec extends UnitSpec with Matchers with GivenWhenThe
       Then("the queue consumer should poll for messages")
       Mockito.verify(queueConsumer).poll()
 
-      And("notification service is called for all valid messages")
-      Mockito.verify(scanningService, Mockito.times(3)).scan(any())
+      And("scanning handler is called only for successfully scanned messages")
+      Mockito
+        .verify(scanningResultHandler)
+        .handleScanningResult(FileIsClean(S3ObjectLocation("bucket", "ID1")))
+      Mockito
+        .verify(scanningResultHandler)
+        .handleScanningResult(FileIsInfected(S3ObjectLocation("bucket", "ID3"), "infection"))
+      Mockito.verifyNoMoreInteractions(scanningResultHandler)
 
       And("successfully processed messages are confirmed")
       Mockito.verify(queueConsumer).confirm(validMessage1)

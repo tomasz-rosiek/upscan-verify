@@ -16,21 +16,11 @@
 
 package services
 
-import model.{S3ObjectLocation, UploadedFile}
+import model.S3ObjectLocation
 
 import scala.concurrent.Future
 
-sealed trait ScanningResult {
-  def location: S3ObjectLocation
-}
-case class FileIsClean(location: S3ObjectLocation) extends ScanningResult
-case class FileIsInfected(location: S3ObjectLocation, details: String) extends ScanningResult
-
-trait ScanningService {
-  def scan(notification: UploadedFile): Future[ScanningResult]
-}
-
-class MockScanningService extends ScanningService {
-  override def scan(notification: UploadedFile): Future[FileIsClean] =
-    Future.successful(FileIsClean(notification.location))
+trait FileManager {
+  def copyToOutboundBucket(file: S3ObjectLocation): Future[Unit]
+  def delete(file: S3ObjectLocation): Future[Unit]
 }
