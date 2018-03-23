@@ -11,6 +11,20 @@ Detailed documentation of the *Upscan* can be found here: [https://github.com/hm
 
 [![Build Status](https://travis-ci.org/hmrc/upscan-verify.svg)](https://travis-ci.org/hmrc/upscan-verify) [ ![Download](https://api.bintray.com/packages/hmrc/releases/upscan-verify/images/download.svg) ](https://bintray.com/hmrc/releases/upscan-verify/_latestVersion)
 
+# Service configuration
+
+Here is the list of service's configuration properties:
+
+- *aws.useContainerCredentials* - if true, the service will use credentials of hosting EC2 instance to access SQS and SNS (default setting: false)
+- *aws.accessKeyId* - AWS key id, not needed when using credentials of hosting EC2 instance
+- *aws.secretAccessKey* - AWS secret key, not needed when using credentials of hosting EC2 instance
+- *aws.sessionToken* - AWS session token, needed only when service is running locally and uses MFA authentication. Proper value
+of the token is set automatically when using aws-profile script
+- *aws.sqs.queue.inbound - address of SQS queue that contains notifications regarding uploads of files to inbound bucket 
+- *aws.s3.region* - AWS region on which outbound AWS bucket is located (default value is *eu-west-2*)
+- *aws.s3.bucket.outbound* - name of the outbound AWS S3 bucket, this bucket will be used to store clean files
+- *aws.sqs.retry.interval* - retry period between failed attempts to poll messages from inbound SQS queue
+
 # Running locally
 
 The service relies heavily on AWS infrastructure so that it cannot be run entirely locally.
@@ -59,8 +73,7 @@ sudo pip install botocore --ignore-installed six
 sudo pip install awscli --ignore-installed six
 ```
 
-
-##Running
+##Starting the service locally
 
 In order to run the app against lab environment it's neeeded to run the following commands:
 ```
@@ -70,20 +83,6 @@ export AWS_DEFAULT_PROFILE=name_of_proper_profile_in_dot_aws_credentials_file
 ./aws-profile sbt
 ```
 These commands will give you an access to SBT shell where you can run the service using 'run' or 'start' commands.
-
-# Service configuration
-
-Here is the list of service's configuration properties:
-
-- *aws.useContainerCredentials* - if true, the service will use credentials of hosting EC2 instance to access SQS and SNS (default setting: false)
-- *aws.accessKeyId* - AWS key id, not needed when using credentials of hosting EC2 instance
-- *aws.secretAccessKey* - AWS secret key, not needed when using credentials of hosting EC2 instance
-- *aws.sessionToken* - AWS session token, needed only when service is running locally and uses MFA authentication. Proper value
-of the token is set automatically when using aws-profile script
-- *aws.sqs.queue.inbound - address of SQS queue that contains notifications regarding uploads of files to inbound bucket 
-- *aws.s3.region* - AWS region on which outbound AWS bucket is located (default value is *eu-west-2*)
-- *aws.s3.bucket.outbound* - name of the outbound AWS S3 bucket, this bucket will be used to store clean files
-- *aws.sqs.retry.interval* - retry period between failed attempts to poll messages from inbound SQS queue
 
 # Deployment
 
@@ -97,11 +96,10 @@ from hosting EC2 instance. Using EC2 instace credentials is enabled by setting `
 Here is the process of deploying upscan-verify:
 * TODO - to be designed yet
 
-
-### Tests
+# Tests
 
 Upscan service has end-to-end acceptance tests which can be found in https://github.com/hmrc/upscan-acceptance-tests repository
 
-### License
+# License
 
 This code is open source software licensed under the [Apache 2.0 License]("http://www.apache.org/licenses/LICENSE-2.0.html")
