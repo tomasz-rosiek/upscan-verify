@@ -93,7 +93,7 @@ class S3FileManagerSpec extends UnitSpec with Matchers with Assertions with Give
       val s3client: AmazonS3 = mock[AmazonS3]
       val fileManager        = new S3FileManager(s3client, configuration)
 
-      When("copying the file is requested")
+      When("deleting the file is requested")
       Await.result(fileManager.delete(S3ObjectLocation("inboundBucket", "file")), 2.seconds)
 
       Then("the S3 copy method of AWS client should be called")
@@ -106,11 +106,11 @@ class S3FileManagerSpec extends UnitSpec with Matchers with Assertions with Give
 
       val s3client: AmazonS3 = mock[AmazonS3]
       Given("deleting file would fail")
-      Mockito.doThrow(new RuntimeException("exception")).when(s3client).copyObject(any(), any(), any(), any())
+      Mockito.doThrow(new RuntimeException("exception")).when(s3client).deleteObject(any(), any())
       val fileManager = new S3FileManager(s3client, configuration)
 
       When("deleting the file is requested")
-      val result = Await.ready(fileManager.copyToOutboundBucket(S3ObjectLocation("inboundBucket", "file")), 2.seconds)
+      val result = Await.ready(fileManager.delete(S3ObjectLocation("inboundBucket", "file")), 2.seconds)
 
       Then("error is returned")
       ScalaFutures.whenReady(result.failed) { error =>
