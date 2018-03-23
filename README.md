@@ -1,9 +1,9 @@
 # upscan-verify
 
-Upscan-verify microservice is a part of Upscan module. The service is responsible for polling for files uploaded by
+upscan-verify microservice is a part of Upscan module. The service is responsible for polling for files uploaded by
 users, scanning these files using ClamAV anti-virus software and moving clean files from inbound AWS S3 bucket (where
 these were uploaded by users) to outbound S3 bucket (where files can be fetched by the service that initiated upload).
-In case file contains virus, the service stores details of the infection in proper quarantine S3 bucket.
+In case file contains virus, the service stores details of the infection in a separate quarantine S3 bucket, and deletes the infected file.
 
 The microservice is internal component of *Upscan* and external users don't have to interact with it.
 
@@ -29,9 +29,9 @@ of the token is set automatically when using aws-profile script
 
 The service relies heavily on AWS infrastructure so that it cannot be run entirely locally.
 
-In order to run the service against one of HMRC accounts (labs, live) it's needed to have an AWS accounts with proper
+In order to run the service against one of HMRC accounts (labs, live) you will need to have an AWS accounts with proper
 role. See [UpScan Accounts/roles](https://github.com/hmrc/aws-users/blob/master/AccountLinks.md) for details.
-The service also requires ClamAV virus scanning software running locally
+The service also requires ClamAV virus scanning software running locally.
 
 ## Running ClamAV
 
@@ -73,7 +73,7 @@ sudo pip install botocore --ignore-installed six
 sudo pip install awscli --ignore-installed six
 ```
 
-##Starting the service locally
+## Starting the service locally
 
 In order to run the app against lab environment it's neeeded to run the following commands:
 ```
