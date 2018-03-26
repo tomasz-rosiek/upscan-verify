@@ -43,6 +43,8 @@ class ClamAvScanningServiceSpec extends UnitSpec with Matchers with Assertions w
         case "bad-file" => Future.failed(new RuntimeException("File not retrieved"))
         case _          => Future.successful("Hello World".getBytes)
       }
+
+      override def copyToQuarantineBucket(file: S3ObjectLocation, details: String): Future[Unit] = ???
     }
 
     "return success if file can be retrieved and scan result clean" in {

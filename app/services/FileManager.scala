@@ -22,6 +22,7 @@ import scala.concurrent.Future
 
 trait FileManager {
   def copyToOutboundBucket(file: S3ObjectLocation): Future[Unit]
+  def copyToQuarantineBucket(file: S3ObjectLocation, details: String): Future[Unit]
   def delete(file: S3ObjectLocation): Future[Unit]
   def getBytes(file: S3ObjectLocation): Future[Array[Byte]]
 }
