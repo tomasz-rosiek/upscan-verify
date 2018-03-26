@@ -26,7 +26,7 @@ import services.FileManager
 import scala.concurrent.{ExecutionContext, Future}
 
 class S3FileManager @Inject()(s3Client: AmazonS3, config: ServiceConfiguration)(implicit ec: ExecutionContext)
-    extends FileManager {
+    extends FileManager[Future] {
   override def copyToOutboundBucket(file: S3ObjectLocation) =
     Future(
       s3Client.copyObject(file.bucket, file.objectKey, config.outboundBucket, file.objectKey)

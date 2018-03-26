@@ -18,9 +18,7 @@ package services
 
 import model.S3ObjectLocation
 
-import scala.concurrent.Future
-
-trait FileManager {
-  def copyToOutboundBucket(file: S3ObjectLocation): Future[Unit]
-  def delete(file: S3ObjectLocation): Future[Unit]
+trait FileManager[F[_]] {
+  def copyToOutboundBucket(file: S3ObjectLocation): F[Unit]
+  def delete(file: S3ObjectLocation): F[Unit]
 }

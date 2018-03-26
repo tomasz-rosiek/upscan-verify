@@ -14,23 +14,27 @@
  * limitations under the License.
  */
 
+import cats.Id
 import config.{PlayBasedServiceConfiguration, ServiceConfiguration}
 import connectors.aws.{S3EventParser, S3FileManager, S3FileNotificationDetailsRetriever, SqsQueueConsumer}
 import play.api.inject.{Binding, Module}
 import play.api.{Configuration, Environment}
 import services._
 
+import scala.concurrent.Future
+import scala.util.Try
+
 class ScannerModule extends Module {
   override def bindings(environment: Environment, configuration: Configuration): Seq[Binding[_]] =
     Seq(
       bind[ServiceConfiguration].to[PlayBasedServiceConfiguration].eagerly(),
-      bind[FileNotificationDetailsRetriever].to[S3FileNotificationDetailsRetriever],
-      bind[MessageParser].to[S3EventParser],
-      bind[QueueConsumer].to[SqsQueueConsumer],
-      bind[PollingJob].to[ScanUploadedFilesFlow],
+      bind[FileNotificationDetailsRetriever[Id]].to[S3FileNotificationDetailsRetriever],
+      bind[MessageParser[Try]].to[S3EventParser],
+      bind[QueueConsumer[Future]].to[SqsQueueConsumer],
+      bind[PollingJob].to[ScanUploadedFilesFlow[Future, Future]],
       bind[ContinousPoller].toSelf.eagerly(),
-      bind[ScanningService].to[MockScanningService],
-      bind[FileManager].to[S3FileManager],
-      bind[VirusNotifier].toInstance(LoggingVirusNotifier)
+      bind[ScanningService[Id]].to[MockScanningService],
+      bind[FileManager[Future]].to[S3FileManager],
+      bind[VirusNotifier[Id]].toInstance(LoggingVirusNotifier)
     )
 }

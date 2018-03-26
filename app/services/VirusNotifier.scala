@@ -16,18 +16,15 @@
 
 package services
 
+import cats.Id
 import model.S3ObjectLocation
 import play.api.Logger
 
-import scala.concurrent.Future
-
-trait VirusNotifier {
-  def notifyFileInfected(file: S3ObjectLocation, details: String): Future[Unit]
+trait VirusNotifier[F[_]] {
+  def notifyFileInfected(file: S3ObjectLocation, details: String): F[Unit]
 }
 
-object LoggingVirusNotifier extends VirusNotifier {
-  override def notifyFileInfected(file: S3ObjectLocation, details: String) = {
+object LoggingVirusNotifier extends VirusNotifier[Id] {
+  override def notifyFileInfected(file: S3ObjectLocation, details: String) =
     Logger.info(s"Virus detected in file $file, details: $details")
-    Future.successful(())
-  }
 }

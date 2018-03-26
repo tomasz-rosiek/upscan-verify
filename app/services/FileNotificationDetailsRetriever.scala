@@ -18,8 +18,6 @@ package services
 
 import model.{S3ObjectLocation, UploadedFile}
 
-import scala.concurrent.Future
-
-trait FileNotificationDetailsRetriever {
-  def retrieveUploadedFileDetails(objectLocation: S3ObjectLocation): Future[UploadedFile]
+trait FileNotificationDetailsRetriever[F[_]] {
+  def retrieveUploadedFileDetails(objectLocation: S3ObjectLocation): F[UploadedFile]
 }

@@ -45,7 +45,7 @@ import scala.concurrent.{ExecutionContext, Future}
 
 class SqsQueueConsumer @Inject()(sqsClient: AmazonSQS, configuration: ServiceConfiguration)(
   implicit ec: ExecutionContext)
-    extends QueueConsumer {
+    extends QueueConsumer[Future] {
 
   override def poll(): Future[List[Message]] = {
     val receiveMessageRequest = new ReceiveMessageRequest(configuration.inboundQueueUrl)

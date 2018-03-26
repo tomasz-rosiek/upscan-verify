@@ -18,14 +18,16 @@ package services
 
 import javax.inject.Inject
 
+import cats.FlatMap
 import model.S3ObjectLocation
+import cats._
+import cats.implicits._
+import scala.concurrent.ExecutionContext
 
-import scala.concurrent.{ExecutionContext, Future}
-
-class ScanningResultHandler @Inject()(fileManager: FileManager, virusNotifier: VirusNotifier)(
+class ScanningResultHandler[F[_]: FlatMap] @Inject()(fileManager: FileManager[F], virusNotifier: VirusNotifier[F])(
   implicit ec: ExecutionContext) {
 
-  def handleScanningResult(result: ScanningResult): Future[Unit] =
+  def handleScanningResult(result: ScanningResult): F[Unit] =
     result match {
       case FileIsClean(file)             => handleClean(file)
       case FileIsInfected(file, details) => handleInfected(file, details)

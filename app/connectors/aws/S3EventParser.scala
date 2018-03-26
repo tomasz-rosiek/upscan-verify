@@ -24,10 +24,9 @@ import play.api.libs.json.Reads._
 import play.api.libs.json._
 import services._
 
-import scala.concurrent.{ExecutionContext, Future}
-import scala.util.Try
+import scala.util.{Failure, Success, Try}
 
-class S3EventParser @Inject()(implicit ec: ExecutionContext) extends MessageParser {
+class S3EventParser @Inject() extends MessageParser[Try] {
 
   case class S3EventNotification(records: Seq[S3EventNotificationRecord])
 
@@ -50,23 +49,24 @@ class S3EventParser @Inject()(implicit ec: ExecutionContext) extends MessagePars
   implicit val messageReads: Reads[S3EventNotification] =
     (JsPath \ "Records").read[Seq[S3EventNotificationRecord]].map(S3EventNotification)
 
-  override def parse(message: Message): Future[FileUploadEvent] =
+  override def parse(message: Message): Try[FileUploadEvent] =
     for {
-      json               <- Future.fromTry(Try(Json.parse(message.body)))
-      deserializedJson   <- asFuture(json.validate[S3EventNotification])
+      json               <- Try(Json.parse(message.body))
+      deserializedJson   <- asTry(json.validate[S3EventNotification])
       interpretedMessage <- interpretS3EventMessage(deserializedJson)
     } yield interpretedMessage
 
-  private def asFuture[T](input: JsResult[T]): Future[T] =
+  private def asTry[T](input: JsResult[T]): Try[T] =
     input.fold(
-      errors => Future.failed(new Exception(s"Cannot parse the message ${errors.toString()}")),
-      result => Future.successful(result))
+      errors => Failure(new Exception(s"Cannot parse the message ${errors.toString()}")),
+      result => Success(result)
+    )
 
-  private def interpretS3EventMessage(result: S3EventNotification): Future[FileUploadEvent] =
+  private def interpretS3EventMessage(result: S3EventNotification): Try[FileUploadEvent] =
     result.records match {
       case S3EventNotificationRecord(_, "aws:s3", _, _, "ObjectCreated:Post", s3Details) :: Nil =>
-        Future.successful(FileUploadEvent(S3ObjectLocation(s3Details.bucketName, s3Details.objectKey)))
-      case _ => Future.failed(new Exception(s"Unexpected number of records in event ${result.records.toString}"))
+        Success(FileUploadEvent(S3ObjectLocation(s3Details.bucketName, s3Details.objectKey)))
+      case _ => Failure(new Exception(s"Unexpected number of records in event ${result.records.toString}"))
     }
 
 }

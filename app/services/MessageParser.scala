@@ -18,9 +18,7 @@ package services
 
 import model.{FileUploadEvent, Message}
 
-import scala.concurrent.Future
+trait MessageParser[F[_]] {
 
-trait MessageParser {
-
-  def parse(message: Message): Future[FileUploadEvent]
+  def parse(message: Message): F[FileUploadEvent]
 }

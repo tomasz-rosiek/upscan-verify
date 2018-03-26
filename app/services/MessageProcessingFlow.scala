@@ -16,10 +16,21 @@
 
 package services
 
+import cats.implicits._
+import cats.FlatMap
 import model.Message
 
-trait QueueConsumer[F[_]] {
-  def poll(): F[List[Message]]
-
-  def confirm(message: Message): F[Unit]
+class MessageProcessingFlow[F[_]: FlatMap](
+  parser: MessageParser[F],
+  fileDetailsRetriever: FileNotificationDetailsRetriever[F],
+  scanningService: ScanningService[F],
+  scanningResultHandler: ScanningResultHandler[F]
+) {
+  def flow(message: Message): F[Unit] =
+    for {
+      parsedMessage  <- parser.parse(message)
+      uploadedFile   <- fileDetailsRetriever.retrieveUploadedFileDetails(parsedMessage.location)
+      scanningResult <- scanningService.scan(uploadedFile)
+      _              <- scanningResultHandler.handleScanningResult(scanningResult)
+    } yield ()
 }

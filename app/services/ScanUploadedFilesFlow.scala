@@ -18,39 +18,34 @@ package services
 
 import javax.inject.Inject
 
+import cats.arrow.FunctionK
 import model.Message
 import play.api.Logger
 
 import scala.concurrent.{ExecutionContext, Future}
+import scala.util.{Failure, Success}
 
-class ScanUploadedFilesFlow @Inject()(
-  consumer: QueueConsumer,
-  parser: MessageParser,
-  fileDetailsRetriever: FileNotificationDetailsRetriever,
-  scanningService: ScanningService,
-  scanningResultHandler: ScanningResultHandler)(implicit ec: ExecutionContext)
+class ScanUploadedFilesFlow[F[_], G[_]] @Inject()(consumer: QueueConsumer[F], flow: MessageProcessingFlow[G])(
+  implicit ec: ExecutionContext,
+  f1: FunctionK[F, Future],
+  f2: FunctionK[G, Future])
     extends PollingJob {
   def run(): Future[Unit] = {
     val outcomes = for {
-      messages        <- consumer.poll()
-      messageOutcomes <- Future.sequence { messages.map(processMessage) }
+      messages        <- f1(consumer.poll())
+      messageOutcomes <- Future.sequence({ messages.map(process(flow.flow)) })
     } yield messageOutcomes
 
     outcomes.map(_ => ())
   }
 
-  private def processMessage(message: Message): Future[Unit] = {
-    val outcome =
-      for {
-        parsedMessage  <- parser.parse(message)
-        uploadedFile   <- fileDetailsRetriever.retrieveUploadedFileDetails(parsedMessage.location)
-        scanningResult <- scanningService.scan(uploadedFile)
-        _              <- scanningResultHandler.handleScanningResult(scanningResult)
-        _              <- consumer.confirm(message)
-      } yield ()
+  private def process(flow: Message => G[Unit])(message: Message): Future[Unit] = {
+    val outcome = f2(flow(message))
 
-    outcome.onFailure {
-      case error: Exception =>
+    outcome.onComplete {
+      case Success(_) =>
+        consumer.confirm(message)
+      case Failure(error) =>
         Logger.warn(s"Failed to process message '${message.id}', cause ${error.getMessage}", error)
     }
 

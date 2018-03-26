@@ -18,18 +18,16 @@ package connectors.aws
 
 import javax.inject.Inject
 
+import cats.Id
 import com.amazonaws.services.s3.AmazonS3
 import config.ServiceConfiguration
 import model.{S3ObjectLocation, UploadedFile}
 import services.FileNotificationDetailsRetriever
 
-import scala.concurrent.{ExecutionContext, Future}
+class S3FileNotificationDetailsRetriever @Inject()(s3Client: AmazonS3, config: ServiceConfiguration)
+    extends FileNotificationDetailsRetriever[Id] {
 
-class S3FileNotificationDetailsRetriever @Inject()(s3Client: AmazonS3, config: ServiceConfiguration)(
-  implicit ec: ExecutionContext)
-    extends FileNotificationDetailsRetriever {
-
-  override def retrieveUploadedFileDetails(objectLocation: S3ObjectLocation): Future[UploadedFile] =
-    Future.successful(UploadedFile(objectLocation))
+  override def retrieveUploadedFileDetails(objectLocation: S3ObjectLocation): Id[UploadedFile] =
+    UploadedFile(objectLocation)
 
 }
