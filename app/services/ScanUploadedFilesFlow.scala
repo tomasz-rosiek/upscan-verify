@@ -26,7 +26,6 @@ import scala.concurrent.{ExecutionContext, Future}
 class ScanUploadedFilesFlow @Inject()(
   consumer: QueueConsumer,
   parser: MessageParser,
-  fileDetailsRetriever: FileNotificationDetailsRetriever,
   scanningService: ScanningService,
   scanningResultHandler: ScanningResultHandler)(implicit ec: ExecutionContext)
     extends PollingJob {
@@ -43,8 +42,7 @@ class ScanUploadedFilesFlow @Inject()(
     val outcome =
       for {
         parsedMessage  <- parser.parse(message)
-        uploadedFile   <- fileDetailsRetriever.retrieveUploadedFileDetails(parsedMessage.location)
-        scanningResult <- scanningService.scan(uploadedFile)
+        scanningResult <- scanningService.scan(parsedMessage.location)
         _              <- scanningResultHandler.handleScanningResult(scanningResult)
         _              <- consumer.confirm(message)
       } yield ()
