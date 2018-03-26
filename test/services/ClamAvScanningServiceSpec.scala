@@ -16,7 +16,7 @@
 
 package services
 
-import model.{S3ObjectLocation, UploadedFile}
+import model.S3ObjectLocation
 import org.mockito.Mockito
 import org.scalatest.{Assertions, GivenWhenThen, Matchers}
 import org.scalatest.mockito.MockitoSugar
@@ -33,7 +33,6 @@ import scala.concurrent.duration._
 class ClamAvScanningServiceSpec extends UnitSpec with Matchers with Assertions with GivenWhenThen with MockitoSugar {
 
   "ClamAvScanningService" should {
-    val fileContents = "Hello World"
 
     val fileManager = new FileManager {
       override def delete(file: S3ObjectLocation): Future[Unit] = ???
@@ -42,9 +41,8 @@ class ClamAvScanningServiceSpec extends UnitSpec with Matchers with Assertions w
 
       override def getBytes(file: S3ObjectLocation): Future[Array[Byte]] = file.objectKey match {
         case "bad-file" => Future.failed(new RuntimeException("File not retrieved"))
-        case _          => Future.successful(fileContents.getBytes)
+        case _          => Future.successful("Hello World".getBytes)
       }
-      Future(fileContents.getBytes)
     }
 
     "return success if file can be retrieved and scan result clean" in {
@@ -58,10 +56,9 @@ class ClamAvScanningServiceSpec extends UnitSpec with Matchers with Assertions w
 
       Given("a file location pointing to a clean file")
       val fileLocation = S3ObjectLocation("inboundBucket", "file")
-      val uploadedFile = UploadedFile(fileLocation)
 
       When("scanning service is called")
-      val result = Await.result(scanningService.scan(uploadedFile), 2.seconds)
+      val result = Await.result(scanningService.scan(fileLocation), 2.seconds)
 
       Then("a scanning clean result should be returned")
       result shouldBe FileIsClean(fileLocation)
@@ -78,10 +75,9 @@ class ClamAvScanningServiceSpec extends UnitSpec with Matchers with Assertions w
 
       Given("a file location pointing to a clean file")
       val fileLocation = S3ObjectLocation("inboundBucket", "file")
-      val uploadedFile = UploadedFile(fileLocation)
 
       When("scanning service is called")
-      val result = Await.result(scanningService.scan(uploadedFile), 2.seconds)
+      val result = Await.result(scanningService.scan(fileLocation), 2.seconds)
 
       Then("a scanning clean result should be returned")
       result shouldBe FileIsInfected(fileLocation, "File dirty")
@@ -97,10 +93,9 @@ class ClamAvScanningServiceSpec extends UnitSpec with Matchers with Assertions w
 
       Given("a file location that cannot be retrieved from the file manager")
       val fileLocation = S3ObjectLocation("inboundBucket", "bad-file")
-      val uploadedFile = UploadedFile(fileLocation)
 
       When("scanning service is called")
-      val result = Await.ready(scanningService.scan(uploadedFile), 2.seconds)
+      val result = Await.ready(scanningService.scan(fileLocation), 2.seconds)
 
       Then("error is returned")
       ScalaFutures.whenReady(result.failed) { error =>

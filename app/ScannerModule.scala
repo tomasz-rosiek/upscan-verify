@@ -15,7 +15,7 @@
  */
 
 import config.{PlayBasedServiceConfiguration, ServiceConfiguration}
-import connectors.aws.{S3EventParser, S3FileManager, S3FileNotificationDetailsRetriever, SqsQueueConsumer}
+import connectors.aws.{S3EventParser, S3FileManager, SqsQueueConsumer}
 import play.api.inject.{Binding, Module}
 import play.api.{Configuration, Environment}
 import services._
@@ -24,7 +24,6 @@ class ScannerModule extends Module {
   override def bindings(environment: Environment, configuration: Configuration): Seq[Binding[_]] =
     Seq(
       bind[ServiceConfiguration].to[PlayBasedServiceConfiguration].eagerly(),
-      bind[FileNotificationDetailsRetriever].to[S3FileNotificationDetailsRetriever],
       bind[MessageParser].to[S3EventParser],
       bind[QueueConsumer].to[SqsQueueConsumer],
       bind[PollingJob].to[ScanUploadedFilesFlow],
