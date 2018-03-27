@@ -24,7 +24,6 @@ import org.scalatest.concurrent.Eventually
 import org.scalatest.mockito.MockitoSugar
 import uk.gov.hmrc.play.test.UnitSpec
 
-import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
 
@@ -55,7 +54,7 @@ class ScanningResultHandlerSpec extends UnitSpec with MockitoSugar with Eventual
 
     }
 
-    "Not delete file from outbound bucket if copying failed" in {
+    "Not delete file from inbound bucket if copying failed" in {
 
       val fileManager: FileManager     = mock[FileManager]
       val virusNotifier: VirusNotifier = mock[VirusNotifier]
@@ -68,7 +67,7 @@ class ScanningResultHandlerSpec extends UnitSpec with MockitoSugar with Eventual
       And("copying the file would fail")
       when(fileManager.copyToOutboundBucket(file)).thenReturn(Future.failed(new Exception("Copy failed")))
 
-      When("when processing scanning result")
+      When("processing scanning result")
       val result = Await.ready(handler.handleScanningResult(FileIsClean(file)), 10 seconds)
 
       Then("original file shoudln't be deleted from inbound bucket")

@@ -17,18 +17,17 @@
 package services
 
 import model.S3ObjectLocation
+import org.mockito.ArgumentMatchers.any
 import org.mockito.Mockito
-import org.scalatest.{Assertions, GivenWhenThen, Matchers}
+import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.mockito.MockitoSugar
+import org.scalatest.{Assertions, GivenWhenThen, Matchers}
+import uk.gov.hmrc.clamav.model.{Clean, Infected}
 import uk.gov.hmrc.clamav.{ClamAntiVirus, ClamAntiVirusFactory}
 import uk.gov.hmrc.play.test.UnitSpec
-import org.mockito.ArgumentMatchers.any
-import org.scalatest.concurrent.ScalaFutures
-import uk.gov.hmrc.clamav.model.{Clean, Infected}
 
-import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.{Await, Future}
 import scala.concurrent.duration._
+import scala.concurrent.{Await, Future}
 
 class ClamAvScanningServiceSpec extends UnitSpec with Matchers with Assertions with GivenWhenThen with MockitoSugar {
 
@@ -79,7 +78,7 @@ class ClamAvScanningServiceSpec extends UnitSpec with Matchers with Assertions w
       When("scanning service is called")
       val result = Await.result(scanningService.scan(fileLocation), 2.seconds)
 
-      Then("a scanning clean result should be returned")
+      Then("a scanning infected result should be returned")
       result shouldBe FileIsInfected(fileLocation, "File dirty")
     }
 
