@@ -34,7 +34,7 @@ class S3FileManager @Inject()(s3Client: AmazonS3, config: ServiceConfiguration)(
       s3Client.copyObject(file.bucket, file.objectKey, config.outboundBucket, file.objectKey)
     )
 
-  override def copyToQuarantineBucket(file: S3ObjectLocation, details: String): Future[Unit] =
+  override def writeToQuarantineBucket(file: S3ObjectLocation, details: String): Future[Unit] =
     for {
       metadata <- Future(s3Client.getObjectMetadata(file.bucket, file.objectKey))
       contents = new ByteArrayInputStream(details.getBytes)

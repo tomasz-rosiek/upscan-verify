@@ -113,7 +113,7 @@ class ScanningResultHandlerSpec extends UnitSpec with MockitoSugar with Eventual
       val details = "There is a virus"
 
       when(virusNotifier.notifyFileInfected(any(), any())).thenReturn(Future.successful(()))
-      when(fileManager.copyToQuarantineBucket(file, details)).thenReturn(Future.successful(()))
+      when(fileManager.writeToQuarantineBucket(file, details)).thenReturn(Future.successful(()))
       when(fileManager.delete(file)).thenReturn(Future.successful(()))
 
       When("scanning infected file")
@@ -123,7 +123,7 @@ class ScanningResultHandlerSpec extends UnitSpec with MockitoSugar with Eventual
       verify(virusNotifier).notifyFileInfected(file, details)
 
       And("file metadata and error details are stored in the quarantine bucket")
-      verify(fileManager).copyToQuarantineBucket(file, details)
+      verify(fileManager).writeToQuarantineBucket(file, details)
 
       And("infected file is deleted")
       verify(fileManager).delete(file)

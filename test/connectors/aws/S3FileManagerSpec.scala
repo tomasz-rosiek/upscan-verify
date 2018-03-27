@@ -176,7 +176,7 @@ class S3FileManagerSpec extends UnitSpec with Matchers with Assertions with Give
       val fileManager = new S3FileManager(s3client, configuration)
 
       When("a call to copy to quarantine is made")
-      val result = Await.result(fileManager.copyToQuarantineBucket(fileLocation, "This is a dirty file"), 2.seconds)
+      val result = Await.result(fileManager.writeToQuarantineBucket(fileLocation, "This is a dirty file"), 2.seconds)
 
       Then("the original object metadata should be retrieved")
       verify(s3client).getObjectMetadata(fileLocation.bucket, fileLocation.objectKey)
@@ -198,7 +198,7 @@ class S3FileManagerSpec extends UnitSpec with Matchers with Assertions with Give
       val fileManager = new S3FileManager(s3client, configuration)
 
       When("a call to copy to quarantine is made")
-      val result = Await.ready(fileManager.copyToQuarantineBucket(fileLocation, "This is a dirty file"), 2.seconds)
+      val result = Await.ready(fileManager.writeToQuarantineBucket(fileLocation, "This is a dirty file"), 2.seconds)
 
       Then("the original object metadata should be requested from S3")
       verify(s3client).getObjectMetadata(fileLocation.bucket, fileLocation.objectKey)
@@ -226,7 +226,7 @@ class S3FileManagerSpec extends UnitSpec with Matchers with Assertions with Give
       val fileManager = new S3FileManager(s3client, configuration)
 
       When("a call to copy to quarantine is made")
-      val result = Await.ready(fileManager.copyToQuarantineBucket(fileLocation, "This is a dirty file"), 2.seconds)
+      val result = Await.ready(fileManager.writeToQuarantineBucket(fileLocation, "This is a dirty file"), 2.seconds)
 
       Then("the original object metadata should be retrieved")
       verify(s3client).getObjectMetadata(fileLocation.bucket, fileLocation.objectKey)
