@@ -32,22 +32,21 @@ package connectors.aws
  * limitations under the License.
  */
 
-import java.io.{ByteArrayInputStream, InputStream}
+import java.io.ByteArrayInputStream
 import java.util
-import java.util.{List => JList}
-import javassist.bytecode.ByteArray
 
+import com.amazonaws.SdkClientException
 import com.amazonaws.services.s3.AmazonS3
-import com.amazonaws.services.s3.model.{CopyObjectResult, DeleteObjectsResult, S3Object, S3ObjectInputStream}
-import com.amazonaws.services.sqs.AmazonSQS
-import com.amazonaws.services.sqs.model.{Message => SqsMessage, _}
+import com.amazonaws.services.s3.model.{CopyObjectResult, ObjectMetadata, S3Object}
 import config.ServiceConfiguration
-import model.{Message, S3ObjectLocation}
+import model.S3ObjectLocation
 import org.mockito.ArgumentMatchers.any
 import org.mockito.Mockito
+import org.mockito.Mockito.{doThrow, verify, verifyNoMoreInteractions, when}
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.mockito.MockitoSugar
 import org.scalatest.{Assertions, GivenWhenThen, Matchers}
+import sun.security.util.PropertyExpander.ExpandException
 import uk.gov.hmrc.play.test.UnitSpec
 
 import scala.concurrent.Await
@@ -56,28 +55,29 @@ import scala.concurrent.duration._
 
 class S3FileManagerSpec extends UnitSpec with Matchers with Assertions with GivenWhenThen with MockitoSugar {
   private val configuration = mock[ServiceConfiguration]
-  Mockito.when(configuration.outboundBucket).thenReturn("outboundBucket")
+  when(configuration.outboundBucket).thenReturn("outboundBucket")
+  when(configuration.quarantineBucket).thenReturn("quarantineBucket")
 
   "S3FileManager" should {
     "allow to copy file from inbound bucket to outbound bucket" in {
 
       val s3client: AmazonS3 = mock[AmazonS3]
-      Mockito.when(s3client.copyObject(any(), any(), any(), any())).thenReturn(new CopyObjectResult())
+      when(s3client.copyObject(any(), any(), any(), any())).thenReturn(new CopyObjectResult())
       val fileManager = new S3FileManager(s3client, configuration)
 
       When("copying the file is requested")
       Await.result(fileManager.copyToOutboundBucket(S3ObjectLocation("inboundBucket", "file")), 2.seconds)
 
       Then("the S3 copy method of AWS client should be called")
-      Mockito.verify(s3client).copyObject("inboundBucket", "file", "outboundBucket", "file")
-      Mockito.verifyNoMoreInteractions(s3client)
+      verify(s3client).copyObject("inboundBucket", "file", "outboundBucket", "file")
+      verifyNoMoreInteractions(s3client)
 
     }
 
     "return error if copying the file failed" in {
 
       val s3client: AmazonS3 = mock[AmazonS3]
-      Mockito.when(s3client.copyObject(any(), any(), any(), any())).thenThrow(new RuntimeException("exception"))
+      when(s3client.copyObject(any(), any(), any(), any())).thenThrow(new RuntimeException("exception"))
       val fileManager = new S3FileManager(s3client, configuration)
 
       When("copying the file is requested")
@@ -99,8 +99,8 @@ class S3FileManagerSpec extends UnitSpec with Matchers with Assertions with Give
       Await.result(fileManager.delete(S3ObjectLocation("inboundBucket", "file")), 2.seconds)
 
       Then("the S3 copy method of AWS client should be called")
-      Mockito.verify(s3client).deleteObject("inboundBucket", "file")
-      Mockito.verifyNoMoreInteractions(s3client)
+      verify(s3client).deleteObject("inboundBucket", "file")
+      verifyNoMoreInteractions(s3client)
 
     }
 
@@ -108,7 +108,7 @@ class S3FileManagerSpec extends UnitSpec with Matchers with Assertions with Give
 
       val s3client: AmazonS3 = mock[AmazonS3]
       Given("deleting file would fail")
-      Mockito.doThrow(new RuntimeException("exception")).when(s3client).deleteObject(any(), any())
+      doThrow(new RuntimeException("exception")).when(s3client).deleteObject(any(), any())
       val fileManager = new S3FileManager(s3client, configuration)
 
       When("deleting the file is requested")
@@ -121,14 +121,14 @@ class S3FileManagerSpec extends UnitSpec with Matchers with Assertions with Give
     }
 
     "return bytes of a successfully retrieved file" in {
-      val fileLocation = S3ObjectLocation("inboundBucket", "file")
+      val fileLocation           = S3ObjectLocation("inboundBucket", "file")
       val byteArray: Array[Byte] = "Hello World".getBytes
 
       val s3Object = new S3Object()
       s3Object.setObjectContent(new ByteArrayInputStream(byteArray))
 
       val s3client: AmazonS3 = mock[AmazonS3]
-      Mockito.when(s3client.getObject(fileLocation.bucket, fileLocation.objectKey)).thenReturn(s3Object)
+      when(s3client.getObject(fileLocation.bucket, fileLocation.objectKey)).thenReturn(s3Object)
 
       Given("a valid file location")
       val fileManager = new S3FileManager(s3client, configuration)
@@ -144,7 +144,10 @@ class S3FileManagerSpec extends UnitSpec with Matchers with Assertions with Give
       val fileLocation = S3ObjectLocation("inboundBucket", "file")
 
       val s3client: AmazonS3 = mock[AmazonS3]
-      Mockito.doThrow(new RuntimeException("exception")).when(s3client).getObject(fileLocation.bucket, fileLocation.objectKey)
+      Mockito
+        .doThrow(new RuntimeException("exception"))
+        .when(s3client)
+        .getObject(fileLocation.bucket, fileLocation.objectKey)
 
       Given("a call to the S3 client errors")
       val fileManager = new S3FileManager(s3client, configuration)
@@ -155,6 +158,86 @@ class S3FileManagerSpec extends UnitSpec with Matchers with Assertions with Give
       Then("error is returned")
       ScalaFutures.whenReady(result.failed) { error =>
         error shouldBe a[RuntimeException]
+      }
+    }
+
+    "return successful if copy of file metadata and content to quarantine bucket succeeds" in {
+      Given("a valid file location and details of an error")
+      val fileLocation = S3ObjectLocation("inboundBucket", "file")
+
+      val userMetadata = new util.HashMap[String, String]()
+      userMetadata.put("callbackUrl", "http://some.callback.url")
+      val fileMetadata = new ObjectMetadata()
+      fileMetadata.setUserMetadata(userMetadata)
+
+      val s3client: AmazonS3 = mock[AmazonS3]
+      when(s3client.getObjectMetadata(any(), any())).thenReturn(fileMetadata)
+
+      val fileManager = new S3FileManager(s3client, configuration)
+
+      When("a call to copy to quarantine is made")
+      val result = Await.result(fileManager.writeToQuarantineBucket(fileLocation, "This is a dirty file"), 2.seconds)
+
+      Then("the original object metadata should be retrieved")
+      verify(s3client).getObjectMetadata(fileLocation.bucket, fileLocation.objectKey)
+
+      And("a new S3 object with details set as contents and object metadata set should be created")
+      verify(s3client).putObject(any(), any(), any(), any())
+
+      And("the service should return success")
+      result shouldBe ()
+    }
+
+    "return failure if retrieval of file metadata fail for copying to quarantine bucket" in {
+      Given("a file location which errors retrieving metadata")
+      val fileLocation = S3ObjectLocation("inboundBucket", "file")
+
+      val s3client: AmazonS3 = mock[AmazonS3]
+      when(s3client.getObjectMetadata(any(), any())).thenThrow(new SdkClientException("This is a metadata exception"))
+
+      val fileManager = new S3FileManager(s3client, configuration)
+
+      When("a call to copy to quarantine is made")
+      val result = Await.ready(fileManager.writeToQuarantineBucket(fileLocation, "This is a dirty file"), 2.seconds)
+
+      Then("the original object metadata should be requested from S3")
+      verify(s3client).getObjectMetadata(fileLocation.bucket, fileLocation.objectKey)
+
+      Then("error is returned")
+      ScalaFutures.whenReady(result.failed) { error =>
+        error            shouldBe a[SdkClientException]
+        error.getMessage shouldBe "This is a metadata exception"
+      }
+    }
+
+    "return failure if put to quarantine bucket fails" in {
+      Given("a valid file location and details of an error")
+      val fileLocation = S3ObjectLocation("inboundBucket", "file")
+
+      val userMetadata = new util.HashMap[String, String]()
+      userMetadata.put("callbackUrl", "http://some.callback.url")
+      val fileMetadata = new ObjectMetadata()
+      fileMetadata.setUserMetadata(userMetadata)
+
+      val s3client: AmazonS3 = mock[AmazonS3]
+      when(s3client.getObjectMetadata(any(), any())).thenReturn(fileMetadata)
+      when(s3client.putObject(any(), any(), any(), any())).thenThrow(new SdkClientException("This is a put exception"))
+
+      val fileManager = new S3FileManager(s3client, configuration)
+
+      When("a call to copy to quarantine is made")
+      val result = Await.ready(fileManager.writeToQuarantineBucket(fileLocation, "This is a dirty file"), 2.seconds)
+
+      Then("the original object metadata should be retrieved")
+      verify(s3client).getObjectMetadata(fileLocation.bucket, fileLocation.objectKey)
+
+      And("a new S3 object with details set as contents and object metadata set should be created")
+      verify(s3client).putObject(any(), any(), any(), any())
+
+      And("error is returned")
+      ScalaFutures.whenReady(result.failed) { error =>
+        error            shouldBe a[SdkClientException]
+        error.getMessage shouldBe "This is a put exception"
       }
     }
   }

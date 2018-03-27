@@ -101,7 +101,7 @@ class ScanningResultHandlerSpec extends UnitSpec with MockitoSugar with Eventual
 
     }
 
-    "Create virus notification and delete infected file in case of virus" in {
+    "Create virus notification, add error and metadata to quarantine bucket, and delete infected file in case of virus" in {
 
       val fileManager: FileManager     = mock[FileManager]
       val virusNotifier: VirusNotifier = mock[VirusNotifier]
@@ -109,22 +109,27 @@ class ScanningResultHandlerSpec extends UnitSpec with MockitoSugar with Eventual
       val handler = new ScanningResultHandler(fileManager, virusNotifier)
 
       Given("there is an infected file")
-      val file = S3ObjectLocation("bucket", "file")
+      val file    = S3ObjectLocation("bucket", "file")
+      val details = "There is a virus"
 
       when(virusNotifier.notifyFileInfected(any(), any())).thenReturn(Future.successful(()))
+      when(fileManager.writeToQuarantineBucket(file, details)).thenReturn(Future.successful(()))
       when(fileManager.delete(file)).thenReturn(Future.successful(()))
 
       When("scanning infected file")
-      Await.result(handler.handleScanningResult(FileIsInfected(file, "There is a virus")), 10 seconds)
+      Await.result(handler.handleScanningResult(FileIsInfected(file, details)), 10 seconds)
 
       Then("notification is created")
-      verify(virusNotifier).notifyFileInfected(file, "There is a virus")
+      verify(virusNotifier).notifyFileInfected(file, details)
 
-      And("file is deleted")
+      And("file metadata and error details are stored in the quarantine bucket")
+      verify(fileManager).writeToQuarantineBucket(file, details)
+
+      And("infected file is deleted")
       verify(fileManager).delete(file)
       verifyNoMoreInteractions(fileManager)
-
     }
+
     "Do not delete infected file if notification creation failed (so that we are able to retry)" in {
       val fileManager: FileManager     = mock[FileManager]
       val virusNotifier: VirusNotifier = mock[VirusNotifier]

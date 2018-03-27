@@ -42,6 +42,8 @@ class ProviderOfAWSCredentialsSpec extends UnitSpec with Matchers {
 
         override def outboundBucket = ???
 
+        override def quarantineBucket = ???
+
         override def useContainerCredentials = false
       }
 
@@ -70,6 +72,8 @@ class ProviderOfAWSCredentialsSpec extends UnitSpec with Matchers {
 
         override def outboundBucket = ???
 
+        override def quarantineBucket = ???
+
         override def useContainerCredentials = false
       }
 
@@ -96,6 +100,8 @@ class ProviderOfAWSCredentialsSpec extends UnitSpec with Matchers {
         override def retryInterval = ???
 
         override def outboundBucket = ???
+
+        override def quarantineBucket = ???
 
         override def useContainerCredentials = true
       }

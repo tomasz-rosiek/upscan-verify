@@ -21,6 +21,8 @@ import play.api.Configuration
 import scala.concurrent.duration._
 
 trait ServiceConfiguration {
+  def quarantineBucket: String
+
   def retryInterval: FiniteDuration
 
   def inboundQueueUrl: String
@@ -60,4 +62,6 @@ class PlayBasedServiceConfiguration @Inject()(configuration: Configuration) exte
     function(key).getOrElse(throw new IllegalStateException(s"Configuration key not found: $key"))
 
   override def outboundBucket = getRequired(configuration.getString(_), "aws.s3.bucket.outbound")
+
+  override def quarantineBucket: String = getRequired(configuration.getString(_), "aws.s3.bucket.quarantine")
 }

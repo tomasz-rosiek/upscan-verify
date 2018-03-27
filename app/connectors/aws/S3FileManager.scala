@@ -16,10 +16,10 @@
 
 package connectors.aws
 
+import java.io.ByteArrayInputStream
 import javax.inject.Inject
 
 import com.amazonaws.services.s3.AmazonS3
-import com.amazonaws.services.s3.model.S3Object
 import com.amazonaws.util.IOUtils
 import config.ServiceConfiguration
 import model.S3ObjectLocation
@@ -34,15 +34,23 @@ class S3FileManager @Inject()(s3Client: AmazonS3, config: ServiceConfiguration)(
       s3Client.copyObject(file.bucket, file.objectKey, config.outboundBucket, file.objectKey)
     )
 
+  override def writeToQuarantineBucket(file: S3ObjectLocation, details: String): Future[Unit] =
+    for {
+      metadata <- Future(s3Client.getObjectMetadata(file.bucket, file.objectKey))
+      contents = new ByteArrayInputStream(details.getBytes)
+      _ <- Future(s3Client.putObject(config.quarantineBucket, file.objectKey, contents, metadata))
+    } yield {
+      ()
+    }
+
   override def delete(file: S3ObjectLocation) =
     Future(
       s3Client.deleteObject(file.bucket, file.objectKey)
     )
 
-  override def getBytes(file: S3ObjectLocation): Future[Array[Byte]] = {
+  override def getBytes(file: S3ObjectLocation): Future[Array[Byte]] =
     Future {
-      val fileFromLocation: S3Object = s3Client.getObject(file.bucket, file.objectKey)
+      val fileFromLocation = s3Client.getObject(file.bucket, file.objectKey)
       IOUtils.toByteArray(fileFromLocation.getObjectContent)
     }
-  }
 }

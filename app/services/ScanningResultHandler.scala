@@ -34,6 +34,7 @@ class ScanningResultHandler @Inject()(fileManager: FileManager, virusNotifier: V
   private def handleInfected(file: S3ObjectLocation, details: String) =
     for {
       _ <- virusNotifier.notifyFileInfected(file, details)
+      _ <- fileManager.writeToQuarantineBucket(file, details)
       _ <- fileManager.delete(file)
     } yield ()
 
