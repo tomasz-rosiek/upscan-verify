@@ -15,7 +15,7 @@
  */
 
 import config.{PlayBasedServiceConfiguration, ServiceConfiguration}
-import connectors.aws.{S3EventParser, S3FileManager, SqsQueueConsumer}
+import connectors.aws.{Ec2InstanceTerminator, S3EventParser, S3FileManager, SqsQueueConsumer}
 import play.api.inject.{Binding, Module}
 import play.api.{Configuration, Environment}
 import services._
@@ -30,6 +30,7 @@ class ScannerModule extends Module {
       bind[ContinousPoller].toSelf.eagerly(),
       bind[ScanningService].to[ClamAvScanningService],
       bind[FileManager].to[S3FileManager],
+      bind[InstanceTerminator].to[Ec2InstanceTerminator],
       bind[VirusNotifier].toInstance(LoggingVirusNotifier)
     )
 }

@@ -19,6 +19,7 @@ package connectors.aws
 import javax.inject.{Inject, Provider}
 
 import com.amazonaws.auth._
+import com.amazonaws.services.ec2.{AmazonEC2, AmazonEC2ClientBuilder}
 import com.amazonaws.services.s3.{AmazonS3, AmazonS3ClientBuilder}
 import com.amazonaws.services.sqs.{AmazonSQS, AmazonSQSClientBuilder}
 import config.ServiceConfiguration
@@ -31,7 +32,8 @@ class AWSClientModule extends Module {
     Seq(
       bind[AWSCredentialsProvider].toProvider[ProviderOfAWSCredentials],
       bind[AmazonSQS].toProvider[SqsClientProvider],
-      bind[AmazonS3].toProvider[S3ClientProvider]
+      bind[AmazonS3].toProvider[S3ClientProvider],
+      bind[AmazonEC2].toProvider[Ec2ClientProvider]
     )
 
 }
@@ -68,4 +70,12 @@ class S3ClientProvider @Inject()(configuration: ServiceConfiguration, credential
       .withCredentials(credentialsProvider)
       .build()
 
+}
+
+class Ec2ClientProvider @Inject()(credentialsProvider: AWSCredentialsProvider) extends Provider[AmazonEC2] {
+  override def get(): AmazonEC2 =
+    AmazonEC2ClientBuilder
+      .standard()
+      .withCredentials(credentialsProvider)
+      .build()
 }
