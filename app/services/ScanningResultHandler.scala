@@ -22,7 +22,7 @@ import model.S3ObjectLocation
 
 import scala.concurrent.{ExecutionContext, Future}
 
-sealed trait InstanceSafety
+sealed trait InstanceSafety extends Product with Serializable
 case object SafeToContinue extends InstanceSafety
 case object ShouldTerminate extends InstanceSafety
 

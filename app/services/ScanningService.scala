@@ -24,7 +24,7 @@ import uk.gov.hmrc.clamav.model.{Clean, Infected}
 
 import scala.concurrent.{ExecutionContext, Future}
 
-sealed trait ScanningResult {
+sealed trait ScanningResult extends Product with Serializable {
   def location: S3ObjectLocation
 }
 
