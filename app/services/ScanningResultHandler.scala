@@ -22,10 +22,14 @@ import model.S3ObjectLocation
 
 import scala.concurrent.{ExecutionContext, Future}
 
+sealed trait InstanceSafety extends Product with Serializable
+case object SafeToContinue extends InstanceSafety
+case object ShouldTerminate extends InstanceSafety
+
 class ScanningResultHandler @Inject()(fileManager: FileManager, virusNotifier: VirusNotifier)(
   implicit ec: ExecutionContext) {
 
-  def handleScanningResult(result: ScanningResult): Future[Unit] =
+  def handleScanningResult(result: ScanningResult): Future[InstanceSafety] =
     result match {
       case FileIsClean(file)             => handleClean(file)
       case FileIsInfected(file, details) => handleInfected(file, details)
@@ -36,11 +40,11 @@ class ScanningResultHandler @Inject()(fileManager: FileManager, virusNotifier: V
       _ <- virusNotifier.notifyFileInfected(file, details)
       _ <- fileManager.writeToQuarantineBucket(file, details)
       _ <- fileManager.delete(file)
-    } yield ()
+    } yield ShouldTerminate
 
   private def handleClean(file: S3ObjectLocation) =
     for {
       _ <- fileManager.copyToOutboundBucket(file)
       _ <- fileManager.delete(file)
-    } yield ()
+    } yield SafeToContinue
 }

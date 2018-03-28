@@ -27,8 +27,10 @@ class ScanUploadedFilesFlow @Inject()(
   consumer: QueueConsumer,
   parser: MessageParser,
   scanningService: ScanningService,
-  scanningResultHandler: ScanningResultHandler)(implicit ec: ExecutionContext)
+  scanningResultHandler: ScanningResultHandler,
+  ec2InstanceTerminator: InstanceTerminator)(implicit ec: ExecutionContext)
     extends PollingJob {
+
   def run(): Future[Unit] = {
     val outcomes = for {
       messages        <- consumer.poll()
@@ -43,8 +45,9 @@ class ScanUploadedFilesFlow @Inject()(
       for {
         parsedMessage  <- parser.parse(message)
         scanningResult <- scanningService.scan(parsedMessage.location)
-        _              <- scanningResultHandler.handleScanningResult(scanningResult)
+        instanceSafety <- scanningResultHandler.handleScanningResult(scanningResult)
         _              <- consumer.confirm(message)
+        _              <- terminateIfInstanceNotSafe(instanceSafety)
       } yield ()
 
     outcome.onFailure {
@@ -56,4 +59,9 @@ class ScanUploadedFilesFlow @Inject()(
 
   }
 
+  private def terminateIfInstanceNotSafe(instanceSafety: InstanceSafety) =
+    instanceSafety match {
+      case ShouldTerminate => ec2InstanceTerminator.terminate()
+      case _               => Future.successful(())
+    }
 }

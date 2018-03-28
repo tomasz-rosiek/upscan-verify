@@ -49,6 +49,7 @@ class SqsQueueConsumer @Inject()(sqsClient: AmazonSQS, configuration: ServiceCon
 
   override def poll(): Future[List[Message]] = {
     val receiveMessageRequest = new ReceiveMessageRequest(configuration.inboundQueueUrl)
+      .withMaxNumberOfMessages(1)
       .withWaitTimeSeconds(20)
 
     val receiveMessageResult: Future[ReceiveMessageResult] =
