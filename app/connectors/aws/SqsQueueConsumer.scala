@@ -34,6 +34,8 @@ package connectors.aws
 
 import javax.inject.Inject
 
+import cats.Monad
+import cats.implicits._
 import com.amazonaws.services.sqs.AmazonSQS
 import com.amazonaws.services.sqs.model.{DeleteMessageRequest, ReceiveMessageRequest, ReceiveMessageResult}
 import config.ServiceConfiguration
@@ -41,18 +43,18 @@ import model.Message
 import services.QueueConsumer
 
 import scala.collection.JavaConverters._
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.ExecutionContext
 
-class SqsQueueConsumer @Inject()(sqsClient: AmazonSQS, configuration: ServiceConfiguration)(
+class SqsQueueConsumer[F[_]: Monad] @Inject()(sqsClient: AmazonSQS, configuration: ServiceConfiguration)(
   implicit ec: ExecutionContext)
-    extends QueueConsumer[Future] {
+    extends QueueConsumer[F] {
 
-  override def poll(): Future[List[Message]] = {
+  override def poll(): F[List[Message]] = {
     val receiveMessageRequest = new ReceiveMessageRequest(configuration.inboundQueueUrl)
       .withWaitTimeSeconds(20)
 
-    val receiveMessageResult: Future[ReceiveMessageResult] =
-      Future(sqsClient.receiveMessage(receiveMessageRequest))
+    val receiveMessageResult: F[ReceiveMessageResult] =
+      implicitly[Monad[F]].pure(sqsClient.receiveMessage(receiveMessageRequest))
 
     receiveMessageResult map { result =>
       result.getMessages.asScala.toList.map(sqsMessage =>
@@ -60,8 +62,8 @@ class SqsQueueConsumer @Inject()(sqsClient: AmazonSQS, configuration: ServiceCon
     }
   }
 
-  override def confirm(message: Message): Future[Unit] = {
+  override def confirm(message: Message): F[Unit] = {
     val deleteMessageRequest = new DeleteMessageRequest(configuration.inboundQueueUrl, message.receiptHandle)
-    Future(sqsClient.deleteMessage(deleteMessageRequest))
+    implicitly[Monad[F]].pure(sqsClient.deleteMessage(deleteMessageRequest))
   }
 }

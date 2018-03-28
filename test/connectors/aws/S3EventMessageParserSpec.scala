@@ -19,12 +19,12 @@ package connectors.aws
 import model.{FileUploadEvent, Message, S3ObjectLocation}
 import org.scalatest.Matchers
 import uk.gov.hmrc.play.test.UnitSpec
-
-import scala.util.{Failure, Success}
+import cats.implicits._
+import scala.util.{Success, Try}
 
 class S3EventMessageParserSpec extends UnitSpec with Matchers {
 
-  val parser = new S3EventParser()
+  val parser = new S3EventParser[Try]()
 
   "MessageParser" should {
     "properly parse valid S3 event message" in {

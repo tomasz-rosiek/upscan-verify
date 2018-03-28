@@ -16,7 +16,7 @@
 
 package services
 
-import cats.Id
+import cats.Monad
 import model.{S3ObjectLocation, UploadedFile}
 
 sealed trait ScanningResult {
@@ -29,6 +29,7 @@ trait ScanningService[F[_]] {
   def scan(notification: UploadedFile): F[ScanningResult]
 }
 
-class MockScanningService extends ScanningService[Id] {
-  override def scan(notification: UploadedFile): Id[FileIsClean] = FileIsClean(notification.location)
+class MockScanningService[F[_]: Monad] extends ScanningService[F] {
+  override def scan(notification: UploadedFile): F[ScanningResult] =
+    implicitly[Monad[F]].pure(FileIsClean(notification.location))
 }

@@ -18,29 +18,28 @@ package services
 
 import javax.inject.Inject
 
-import cats.arrow.FunctionK
 import model.Message
 import play.api.Logger
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success}
 
-class ScanUploadedFilesFlow[F[_], G[_]] @Inject()(consumer: QueueConsumer[F], flow: MessageProcessingFlow[G])(
-  implicit ec: ExecutionContext,
-  f1: FunctionK[F, Future],
-  f2: FunctionK[G, Future])
+class ScanUploadedFilesFlow @Inject()(consumer: QueueConsumer[Future], flow: MessageProcessingFlow[Future])(
+  implicit ec: ExecutionContext)
     extends PollingJob {
   def run(): Future[Unit] = {
     val outcomes = for {
-      messages        <- f1(consumer.poll())
-      messageOutcomes <- Future.sequence({ messages.map(process(flow.flow)) })
+      messages <- consumer.poll()
+      messageOutcomes <- Future.sequence {
+                          messages.map(process(flow.flow))
+                        }
     } yield messageOutcomes
 
     outcomes.map(_ => ())
   }
 
-  private def process(flow: Message => G[Unit])(message: Message): Future[Unit] = {
-    val outcome = f2(flow(message))
+  private def process(flow: Message => Future[Unit])(message: Message): Future[Unit] = {
+    val outcome = flow(message)
 
     outcome.onComplete {
       case Success(_) =>

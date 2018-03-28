@@ -18,16 +18,16 @@ package connectors.aws
 
 import javax.inject.Inject
 
-import cats.Id
+import cats.{Id, Monad}
 import com.amazonaws.services.s3.AmazonS3
 import config.ServiceConfiguration
 import model.{S3ObjectLocation, UploadedFile}
 import services.FileNotificationDetailsRetriever
 
-class S3FileNotificationDetailsRetriever @Inject()(s3Client: AmazonS3, config: ServiceConfiguration)
-    extends FileNotificationDetailsRetriever[Id] {
+class S3FileNotificationDetailsRetriever[F[_]: Monad] @Inject()(s3Client: AmazonS3, config: ServiceConfiguration)
+    extends FileNotificationDetailsRetriever[F] {
 
-  override def retrieveUploadedFileDetails(objectLocation: S3ObjectLocation): Id[UploadedFile] =
-    UploadedFile(objectLocation)
+  override def retrieveUploadedFileDetails(objectLocation: S3ObjectLocation): F[UploadedFile] =
+    implicitly[Monad[F]].pure(UploadedFile(objectLocation))
 
 }

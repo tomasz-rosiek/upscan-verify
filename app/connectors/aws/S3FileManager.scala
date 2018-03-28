@@ -18,22 +18,16 @@ package connectors.aws
 
 import javax.inject.Inject
 
+import cats.Monad
 import com.amazonaws.services.s3.AmazonS3
 import config.ServiceConfiguration
 import model.S3ObjectLocation
 import services.FileManager
 
-import scala.concurrent.{ExecutionContext, Future}
-
-class S3FileManager @Inject()(s3Client: AmazonS3, config: ServiceConfiguration)(implicit ec: ExecutionContext)
-    extends FileManager[Future] {
+class S3FileManager[F[_]: Monad] @Inject()(s3Client: AmazonS3, config: ServiceConfiguration) extends FileManager[F] {
   override def copyToOutboundBucket(file: S3ObjectLocation) =
-    Future(
-      s3Client.copyObject(file.bucket, file.objectKey, config.outboundBucket, file.objectKey)
-    )
+    implicitly[Monad[F]].pure(s3Client.copyObject(file.bucket, file.objectKey, config.outboundBucket, file.objectKey))
 
   override def delete(file: S3ObjectLocation) =
-    Future(
-      s3Client.deleteObject(file.bucket, file.objectKey)
-    )
+    implicitly[Monad[F]].pure(s3Client.deleteObject(file.bucket, file.objectKey))
 }

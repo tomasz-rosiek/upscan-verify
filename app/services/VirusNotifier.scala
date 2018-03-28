@@ -16,7 +16,7 @@
 
 package services
 
-import cats.Id
+import cats.{Id, Monad}
 import model.S3ObjectLocation
 import play.api.Logger
 
@@ -24,7 +24,7 @@ trait VirusNotifier[F[_]] {
   def notifyFileInfected(file: S3ObjectLocation, details: String): F[Unit]
 }
 
-object LoggingVirusNotifier extends VirusNotifier[Id] {
+class LoggingVirusNotifier[F[_]: Monad] extends VirusNotifier[F] {
   override def notifyFileInfected(file: S3ObjectLocation, details: String) =
-    Logger.info(s"Virus detected in file $file, details: $details")
+    implicitly[Monad[F]].pure(Logger.info(s"Virus detected in file $file, details: $details"))
 }
